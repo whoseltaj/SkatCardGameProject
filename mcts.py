@@ -18,11 +18,11 @@ class Node:
         self.state_cache = defaultdict(float)
 
     def is_fully_expanded(self):
-        """Check if all possible actions from this node have been expanded."""
+        
         return len(self.untried_actions) == 0
 
     def best_child(self, exploration_weight=1.41):
-        """Select the best child node using UCT (Upper Confidence Bound for Trees)."""
+        #Select the best child node using UCB1
         choices_weights = [
             (child.value / (child.visits + 1e-6)) +
             exploration_weight * math.sqrt(math.log(self.visits + 1) / (child.visits + 1e-6))
@@ -31,7 +31,7 @@ class Node:
         return self.children[choices_weights.index(max(choices_weights))]
 
     def expand(self):
-        """Expand the node by selecting an untried action and adding the resulting node as a child."""
+        #Expand the node by selecting an untried action and adding the resulting node as a child."""
         action = self.untried_actions.pop(0)
         self.expanded_actions.add(action)
         next_state = deepcopy(self.state)
@@ -41,7 +41,7 @@ class Node:
         return child_node
 
     def is_terminal_node(self):
-        """Check if the current node represents a terminal state in the game."""
+        #Check if the current node represents a terminal state in the game.
         return self.state.is_terminal()
 
     def get_path(self):
@@ -63,7 +63,7 @@ class MCTS:
         self.state_cache = {}
 
     def select(self, node):
-        """Select the most promising node using UCT until a non-terminal, non-fully expanded node is found."""
+        #Select the most promising node using UCT until a non-terminal, non-fully expanded node is found."
         while not node.is_terminal_node() and node.is_fully_expanded():
             node = node.best_child(self.adjust_exploration_rate(node))
         return node
@@ -79,7 +79,7 @@ class MCTS:
             return self.exploration_weight * 0.8  # Late game: decrease exploration
 
     def simulate(self, node):
-        """Simulate a game from the current node's state until a terminal state is reached or max depth."""
+        #Simulate a game from the current node's state until a terminal state is reached or max depth.
         current_state = deepcopy(node.state)
         depth = 0
         while not current_state.is_terminal() and depth < self.max_depth:
@@ -99,7 +99,7 @@ class MCTS:
         return random.choices(legal_moves, weights=move_weights, k=1)[0]
 
     def evaluate_move(self, move, state):
-        """Evaluate a move's strategic importance during rollouts."""
+        #Evaluate a move's strategic importance during rollouts.
         suit, rank = move.split('-')
         weight = 1  # Base weight for any move
         if suit == state.trump_suit or rank == 'jack':
@@ -111,7 +111,7 @@ class MCTS:
         return weight
 
     def backpropagate(self, node, reward):
-        """Backpropagate the result of a simulation up the tree, updating visits and value."""
+        #Backpropagate the result of a simulation up the tree, updating visits and value.
         while node:
             node.visits += 1
             node.value += reward
@@ -120,7 +120,7 @@ class MCTS:
             node = node.parent
 
     def run(self, initial_state, itermax=1000):
-        """Run the MCTS algorithm for a given number of iterations and return the best child."""
+        #Run the MCTS algorithm for a given number of iterations and return the best child.
         root = Node(initial_state)
         for _ in range(itermax):
             node = self.select(root)
@@ -143,7 +143,7 @@ class SkatGameState:
         self.last_move = None
 
     def get_legal_moves(self):
-        """Return the list of legal moves for the current player."""
+        #Return the list of legal moves for the current player.
         current_hand = self.cards_in_hand[self.current_player]
         if not self.trick_cards:
             return current_hand  # Any card can be played if the trick is empty
@@ -152,7 +152,7 @@ class SkatGameState:
         return playable_cards if playable_cards else current_hand  # Must follow suit if possible
 
     def perform_move(self, card):
-        """Execute a move by the current player, updating the game state."""
+        #Execute a move by the current player, updating the game state.
         self.trick_cards.append(card)
         self.cards_in_hand[self.current_player].remove(card)
         self.last_move = card
@@ -160,7 +160,7 @@ class SkatGameState:
             self.resolve_trick()
 
     def resolve_trick(self):
-        """Determine the winner of the current trick and update the state accordingly."""
+        #Determine the winner of the current trick and update the state accordingly.
         winning_card = max(self.trick_cards, key=self.card_strength)
         winner = (self.current_player + self.trick_cards.index(winning_card)) % 3
         self.tricks_won[winner].append(list(self.trick_cards))
@@ -168,7 +168,7 @@ class SkatGameState:
         self.current_player = winner
 
     def card_strength(self, card):
-        """Evaluate the strength of a card, considering trump suit and rank."""
+        #Evaluate the strength of a card, considering trump suit and rank.
         suit, rank = card.split('-')
         is_trump = suit == self.trump_suit or rank == 'jack'
         rank_order = ['jack', 'ace', '10', 'king', 'queen', '9', '8', '7'] if is_trump else ['ace', '10', 'king', 'queen', 'jack', '9', '8', '7']
@@ -176,21 +176,21 @@ class SkatGameState:
         return (1 if is_trump else 0, rank_index)
 
     def is_terminal(self):
-        """Check if the game is in a terminal state (all cards have been played)."""
+        #Check if the game is in a terminal state (all cards have been played).
         return all(len(hand) == 0 for hand in self.cards_in_hand.values())
 
     def is_lead_move(self, card):
-        """Check if a card is a lead move in a trick."""
+        #Check if a card is a lead move in a trick."""
         return len(self.trick_cards) == 0
 
     def get_reward(self):
-        """Calculate the reward for the current game state, focusing on declarer's score."""
+        #Calculate the reward for the current game state, focusing on declarer's score."""
         declarer = 0  # For simplicity, assuming player 0 is the declarer
         declarer_points = sum(card_value(card) for trick in self.tricks_won[declarer] for card in trick)
         return 1 if declarer_points >= 61 else -1  # Declarer wins if points >= 61
 
     def get_tricks_cards(self, player):
-        """Return all cards won by a specific player."""
+        #Return all cards won by a specific player."""
         return [card for trick in self.tricks_won[player] for card in trick] if self.tricks_won[player] else []
 
 # Helper function to evaluate card value
